@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cruise xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="cruise-config.xsd" schemaVersion="75">
+  <server artifactsdir="artifacts" commandRepositoryLocation="default" serverId="31299db5-fd58-469e-a775-312c8eae9c97" />
+  <pipelines group="cds-group">
+    <pipeline name="CDS-DEMO" isLocked="false">
+      <params>
+        <param name="project_name">commons</param>
+      </params>
+      <materials>
+        <git url="https://github.com/nature/hub-commons" dest="commons" autoUpdate="false" materialName="sources" />
+      </materials>
+      <stage name="pre-build">
+        <approval type="manual" />
+        <jobs>
+          <job name="check_jenkins">
+            <tasks>
+              <exec command="/bin/sh">
+                <arg>/Users/antonio.nascimento/_dev/_tools/bin/commons-success.sh</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="build_test" cleanWorkingDir="true">
+        <jobs>
+          <job name="build">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_name}">
+                <arg>test</arg>
+                <runif status="any" />
+              </exec>
+            </tasks>
+            <artifacts>
+              <test src="hub-test-commons/target/surefire-reports/" dest="test-reports" />
+            </artifacts>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="release_clean">
+        <jobs>
+          <job name="clean">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_name}">
+                <arg>--batch-mode</arg>
+                <arg>release:clean</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="release_prepare">
+        <jobs>
+          <job name="prepare">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_name}">
+                <arg>--batch-mode</arg>
+                <arg>release:prepare</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+    <pipeline name="main-apps" labeltemplate="1.2.${COUNT}" isLocked="false">
+      <materials>
+        <git url="https://github.com/nature/hub-api" dest="api" materialName="HUB-API" />
+      </materials>
+      <stage name="pre-build-test">
+        <approval type="manual" />
+        <jobs>
+          <job name="defaultJob">
+            <tasks>
+              <exec command="/bin/bash">
+                <arg>-c</arg>
+                <arg>echo $SHELL ${GO_PIPELINE_LABEL}</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+  </pipelines>
+  <pipelines group="CDS-POC">
+    <pipeline name="common" labeltemplate="1.0.${COUNT}" isLocked="false">
+      <params>
+        <param name="project_home">commons2</param>
+      </params>
+      <materials>
+        <git url="https://github.com/antmyth/go-commons2" dest="#{project_home}" autoUpdate="false" materialName="sources" />
+      </materials>
+      <stage name="build" cleanWorkingDir="true">
+        <approval type="manual" />
+        <jobs>
+          <job name="build">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>clean</arg>
+                <arg>test</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <artifacts>
+              <artifact src="commons2/pom.xml" />
+            </artifacts>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="pre-clean">
+        <jobs>
+          <job name="pre-clean">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>--batch-mode</arg>
+                <arg>release:clean</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="prepare">
+        <jobs>
+          <job name="prepare">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>--batch-mode</arg>
+                <arg>release:prepare</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="release">
+        <jobs>
+          <job name="release_perform">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>--batch-mode</arg>
+                <arg>release:perform</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="clean-release">
+        <jobs>
+          <job name="cleam">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>--batch-mode</arg>
+                <arg>release:clean</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+    <pipeline name="application1-pipeline">
+      <params>
+        <param name="COMMON_POM_FILE">../common/pom.xml</param>
+        <param name="project_home">app</param>
+      </params>
+      <materials>
+        <pipeline pipelineName="common" stageName="release" materialName="release" />
+        <git url="https://github.com/antmyth/go_main1.git" dest="#{project_home}" autoUpdate="false" materialName="app1-sources" />
+      </materials>
+      <stage name="get_common" cleanWorkingDir="true">
+        <jobs>
+          <job name="get_common_pom">
+            <tasks>
+              <fetchartifact pipeline="common" stage="build" job="build" srcfile="pom.xml" dest="common">
+                <runif status="passed" />
+              </fetchartifact>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>scm:update</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="update-dependencies" fetchMaterials="false">
+        <jobs>
+          <job name="update_pom">
+            <tasks>
+              <exec command="/bin/sh" workingdir="app">
+                <arg>/Users/antonio.nascimento/_dev/_tools/bin/update-versions.sh</arg>
+                <arg>#{COMMON_POM_FILE}</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="build" fetchMaterials="false">
+        <jobs>
+          <job name="build">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>clean</arg>
+                <arg>test</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="commit-updates" fetchMaterials="false">
+        <jobs>
+          <job name="commit">
+            <tasks>
+              <exec command="/bin/sh" workingdir="#{project_home}">
+                <arg>/Users/antonio.nascimento/_dev/_tools/bin/commit-changes.sh</arg>
+                <arg>#{COMMON_POM_FILE}</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="pre-clean" fetchMaterials="false">
+        <jobs>
+          <job name="pre-clean">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>--batch-mode</arg>
+                <arg>release:clean</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="prepare" fetchMaterials="false">
+        <jobs>
+          <job name="prepare">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>--batch-mode</arg>
+                <arg>release:prepare</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="release" fetchMaterials="false">
+        <jobs>
+          <job name="release_perform">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>--batch-mode</arg>
+                <arg>release:perform</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="clean-release" fetchMaterials="false">
+        <jobs>
+          <job name="cleam">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>--batch-mode</arg>
+                <arg>release:clean</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+    <pipeline name="application2-pipeline">
+      <params>
+        <param name="COMMON_POM_FILE">../common/pom.xml</param>
+        <param name="project_home">app</param>
+      </params>
+      <materials>
+        <pipeline pipelineName="common" stageName="release" materialName="release" />
+        <git url="https://github.com/antmyth/go_main2.git" dest="#{project_home}" autoUpdate="false" materialName="app-sources" />
+      </materials>
+      <stage name="get_common" cleanWorkingDir="true">
+        <jobs>
+          <job name="get_common_pom">
+            <tasks>
+              <fetchartifact pipeline="common" stage="build" job="build" srcfile="pom.xml" dest="common">
+                <runif status="passed" />
+              </fetchartifact>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>scm:update</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="update-dependencies" fetchMaterials="false">
+        <jobs>
+          <job name="update_pom">
+            <tasks>
+              <exec command="/bin/sh" workingdir="app">
+                <arg>/Users/antonio.nascimento/_dev/_tools/bin/update-versions.sh</arg>
+                <arg>#{COMMON_POM_FILE}</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="build" fetchMaterials="false">
+        <jobs>
+          <job name="build">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>clean</arg>
+                <arg>test</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="commit-updates" fetchMaterials="false">
+        <jobs>
+          <job name="commit">
+            <tasks>
+              <exec command="/bin/sh" workingdir="#{project_home}">
+                <arg>/Users/antonio.nascimento/_dev/_tools/bin/commit-changes.sh</arg>
+                <arg>#{COMMON_POM_FILE}</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="pre-clean" fetchMaterials="false">
+        <jobs>
+          <job name="pre-clean">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>--batch-mode</arg>
+                <arg>release:clean</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="prepare" fetchMaterials="false">
+        <jobs>
+          <job name="prepare">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>--batch-mode</arg>
+                <arg>release:prepare</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="release" fetchMaterials="false">
+        <jobs>
+          <job name="release_perform">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>--batch-mode</arg>
+                <arg>release:perform</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="clean-release" fetchMaterials="false">
+        <jobs>
+          <job name="cleam">
+            <tasks>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>--batch-mode</arg>
+                <arg>release:clean</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+  </pipelines>
+  <agents>
+    <agent hostname="L6853" ipaddress="10.103.148.37" uuid="2c511ef4-205f-4fc7-b53e-3f831311acf3" />
+  </agents>
+</cruise>
