@@ -15,7 +15,7 @@
           <job name="check_jenkins">
             <tasks>
               <exec command="/bin/sh">
-                <arg>/Users/antonio.nascimento/_dev/_tools/bin/commons-success.sh</arg>
+                <arg>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts/commons-success.sh</arg>
                 <runif status="passed" />
               </exec>
             </tasks>
@@ -191,8 +191,9 @@
           <job name="update_pom">
             <tasks>
               <exec command="/bin/sh" workingdir="app">
-                <arg>/Users/antonio.nascimento/_dev/_tools/bin/update-versions.sh</arg>
-                <arg>#{COMMON_POM_FILE}</arg>
+                  <arg>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts/update-versions.sh</arg>
+                  <arg>#{COMMON_POM_FILE}</arg>
+                  <arg>commons</arg>
                 <runif status="passed" />
               </exec>
             </tasks>
@@ -220,7 +221,7 @@
           <job name="commit">
             <tasks>
               <exec command="/bin/sh" workingdir="#{project_home}">
-                <arg>/Users/antonio.nascimento/_dev/_tools/bin/commit-changes.sh</arg>
+                <arg>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts/commit-changes.sh</arg>
                 <arg>#{COMMON_POM_FILE}</arg>
                 <runif status="passed" />
               </exec>
@@ -310,8 +311,9 @@
           <job name="update_pom">
             <tasks>
               <exec command="/bin/sh" workingdir="app">
-                <arg>/Users/antonio.nascimento/_dev/_tools/bin/update-versions.sh</arg>
+                <arg>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts/update-versions.sh</arg>
                 <arg>#{COMMON_POM_FILE}</arg>
+                <arg>commons</arg>
                 <runif status="passed" />
               </exec>
             </tasks>
@@ -339,7 +341,7 @@
           <job name="commit">
             <tasks>
               <exec command="/bin/sh" workingdir="#{project_home}">
-                <arg>/Users/antonio.nascimento/_dev/_tools/bin/commit-changes.sh</arg>
+                <arg>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts/commit-changes.sh</arg>
                 <arg>#{COMMON_POM_FILE}</arg>
                 <runif status="passed" />
               </exec>
