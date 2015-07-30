@@ -15,6 +15,7 @@ APP_NAME = ARGV.shift
 old_pom = IO.read(POM_FILE)
 commons_version = old_pom.scan(/<#{APP_NAME}.version>(.*)<\/#{APP_NAME}.version>/)[0]
 puts "Old version =#{commons_version}"
+puts "New version =#{NEW_VERSION}"
 new_pom = old_pom.sub(/<#{APP_NAME}.version>(.*)<\/#{APP_NAME}.version>/,"<#{APP_NAME}.version>"+NEW_VERSION+"<\/#{APP_NAME}.version>")
 
 File.open(POM_FILE, 'wb') { |file|

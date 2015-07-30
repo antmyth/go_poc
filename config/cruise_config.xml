@@ -83,6 +83,28 @@
         </jobs>
       </stage>
     </pipeline>
+    <pipeline name="ENV_TEST">
+      <environmentvariables>
+        <variable name="SOME_ENV_VAR">
+          <value>some env value</value>
+        </variable>
+      </environmentvariables>
+      <materials>
+        <pipeline pipelineName="main-apps" stageName="pre-build-test" />
+      </materials>
+      <stage name="defaultStage">
+        <jobs>
+          <job name="defaultJob">
+            <tasks>
+              <exec command="/bin/sh">
+                <arg>../test_vars.sh</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
   </pipelines>
   <pipelines group="CDS-POC">
     <pipeline name="common" isLocked="false">
@@ -164,9 +186,15 @@
     </pipeline>
     <pipeline name="application1-pipeline">
       <params>
+        <param name="SCRIPTS_HOME">/Users/antonio.nascimento/_dev/_projects/go_poc/scripts</param>
         <param name="COMMON_POM_FILE">../common/pom.xml</param>
         <param name="project_home">app</param>
       </params>
+      <environmentvariables>
+        <variable name="SCRIPTS_HOME">
+          <value>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts</value>
+        </variable>
+      </environmentvariables>
       <materials>
         <pipeline pipelineName="common" stageName="release" materialName="release" />
         <git url="https://github.com/antmyth/go_main1.git" dest="#{project_home}" autoUpdate="false" materialName="app1-sources" />
@@ -191,9 +219,9 @@
           <job name="update_pom">
             <tasks>
               <exec command="/bin/sh" workingdir="app">
-                  <arg>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts/update-versions.sh</arg>
-                  <arg>#{COMMON_POM_FILE}</arg>
-                  <arg>commons</arg>
+                <arg>#{SCRIPTS_HOME}/update-versions.sh</arg>
+                <arg>#{COMMON_POM_FILE}</arg>
+                <arg>commons</arg>
                 <runif status="passed" />
               </exec>
             </tasks>
@@ -212,6 +240,7 @@
             </tasks>
             <artifacts>
               <artifact src="#{project_home}/pom.xml" />
+              <test src="#{project_home}/target/surefire-reports" dest="test-reports" />
             </artifacts>
           </job>
         </jobs>
@@ -221,7 +250,7 @@
           <job name="commit">
             <tasks>
               <exec command="/bin/sh" workingdir="#{project_home}">
-                <arg>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts/commit-changes.sh</arg>
+                <arg>#{SCRIPTS_HOME}/commit-changes.sh</arg>
                 <arg>#{COMMON_POM_FILE}</arg>
                 <runif status="passed" />
               </exec>
@@ -284,9 +313,15 @@
     </pipeline>
     <pipeline name="application2-pipeline">
       <params>
+        <param name="SCRIPTS_HOME">/Users/antonio.nascimento/_dev/_projects/go_poc/scripts</param>
         <param name="COMMON_POM_FILE">../common/pom.xml</param>
         <param name="project_home">app</param>
       </params>
+      <environmentvariables>
+        <variable name="SCRIPTS_HOME">
+          <value>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts</value>
+        </variable>
+      </environmentvariables>
       <materials>
         <pipeline pipelineName="common" stageName="release" materialName="release" />
         <git url="https://github.com/antmyth/go_main2.git" dest="#{project_home}" autoUpdate="false" materialName="app-sources" />
@@ -311,7 +346,7 @@
           <job name="update_pom">
             <tasks>
               <exec command="/bin/sh" workingdir="app">
-                <arg>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts/update-versions.sh</arg>
+                <arg>#{SCRIPTS_HOME}/update-versions.sh</arg>
                 <arg>#{COMMON_POM_FILE}</arg>
                 <arg>commons</arg>
                 <runif status="passed" />
@@ -341,7 +376,7 @@
           <job name="commit">
             <tasks>
               <exec command="/bin/sh" workingdir="#{project_home}">
-                <arg>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts/commit-changes.sh</arg>
+                <arg>#{SCRIPTS_HOME}/commit-changes.sh</arg>
                 <arg>#{COMMON_POM_FILE}</arg>
                 <runif status="passed" />
               </exec>
@@ -409,6 +444,7 @@
         <param name="APP2_POM_FILE">../app2/pom.xml</param>
         <param name="APP2_NAME">go-main2</param>
         <param name="project_home">integration</param>
+        <param name="SCRIPTS_HOME">/Users/antonio.nascimento/_dev/_projects/go_poc/scripts</param>
       </params>
       <materials>
         <pipeline pipelineName="application1-pipeline" stageName="release" materialName="app1" />
@@ -436,15 +472,20 @@
       <stage name="update-dependencies" fetchMaterials="false">
         <jobs>
           <job name="update_app_versions">
+            <environmentvariables>
+              <variable name="SCRIPTS_HOME">
+                <value>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts</value>
+              </variable>
+            </environmentvariables>
             <tasks>
               <exec command="/bin/sh" workingdir="#{project_home}">
-                <arg>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts/update-versions.sh</arg>
+                <arg>#{SCRIPTS_HOME}/update-versions.sh</arg>
                 <arg>#{APP1_POM_FILE}</arg>
                 <arg>#{APP1_NAME}</arg>
                 <runif status="passed" />
               </exec>
               <exec command="/bin/sh" workingdir="#{project_home}">
-                <arg>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts/update-versions.sh</arg>
+                <arg>#{SCRIPTS_HOME}/update-versions.sh</arg>
                 <arg>#{APP2_POM_FILE}</arg>
                 <arg>#{APP2_NAME}</arg>
                 <runif status="passed" />
@@ -474,7 +515,7 @@
           <job name="commit">
             <tasks>
               <exec command="mvn" workingdir="#{project_home}">
-                <arg>-Dmessage="Update to the latest released versions"</arg>
+                <arg>-Dmessage=Update to the latest released versions</arg>
                 <arg>scm:checkin</arg>
                 <runif status="passed" />
               </exec>
@@ -483,7 +524,7 @@
         </jobs>
       </stage>
     </pipeline>
-    <pipeline name="deploy" isLocked="false">
+    <pipeline name="deploy" isLocked="true">
       <materials>
         <pipeline pipelineName="integration" stageName="commit-updates" />
       </materials>
