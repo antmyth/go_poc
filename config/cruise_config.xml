@@ -402,38 +402,53 @@
     </pipeline>
     <pipeline name="integration">
       <params>
-        <param name="COMMON_POM_FILE">../common/pom.xml</param>
+        <param name="APP1_POM_FILE">../app1/pom.xml</param>
+        <param name="APP1_NAME">go-main1</param>
+        <param name="APP2_POM_FILE">../app2/pom.xml</param>
+        <param name="APP2_NAME">go-main2</param>
         <param name="project_home">integration</param>
       </params>
       <materials>
         <pipeline pipelineName="application1-pipeline" stageName="release" materialName="app1" />
         <pipeline pipelineName="application2-pipeline" stageName="release" materialName="app2" />
-        <git url="https://github.com/antmyth/go_2e2_test.git" dest="#{project_home}" materialName="sources" />
+        <git url="https://github.com/antmyth/go_2e2_test.git" dest="#{project_home}" autoUpdate="false" materialName="sources" />
       </materials>
-      <stage name="update-versions" cleanWorkingDir="true">
+      <stage name="prepare" cleanWorkingDir="true">
         <jobs>
-          <job name="get_app1_pom">
+          <job name="get_updated_materials">
             <tasks>
-              <fetchartifact pipeline="application1-pipeline" stage="build" job="build" srcfile="pom.xml" dest="app1/">
+              <fetchartifact pipeline="application1-pipeline" stage="build" job="build" srcfile="pom.xml" dest="app1">
                 <runif status="passed" />
               </fetchartifact>
-            </tasks>
-          </job>
-          <job name="get_app2_pom">
-            <tasks>
-              <fetchartifact pipeline="application2-pipeline" stage="build" job="build" srcfile="pom.xml" dest="app2/">
+              <fetchartifact pipeline="application2-pipeline" stage="build" job="build" srcfile="pom.xml" dest="app2">
                 <runif status="passed" />
               </fetchartifact>
-            </tasks>
-          </job>
-          <job name="force_up_to_date">
-            <tasks>
               <exec command="mvn" workingdir="#{project_home}">
                 <arg>scm:update</arg>
                 <runif status="passed" />
               </exec>
             </tasks>
-          </job>		  
+          </job>
+        </jobs>
+      </stage>
+      <stage name="update-dependencies" fetchMaterials="false">
+        <jobs>
+          <job name="update_app_versions">
+            <tasks>
+              <exec command="/bin/sh" workingdir="#{project_home}">
+                <arg>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts/update-versions.sh</arg>
+                <arg>#{APP1_POM_FILE}</arg>
+                <arg>#{APP1_NAME}</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="/bin/sh" workingdir="#{project_home}">
+                <arg>/Users/antonio.nascimento/_dev/_projects/go_poc/scripts/update-versions.sh</arg>
+                <arg>#{APP2_POM_FILE}</arg>
+                <arg>#{APP2_NAME}</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
         </jobs>
       </stage>
       <stage name="build" fetchMaterials="false">
@@ -456,9 +471,38 @@
         <jobs>
           <job name="commit">
             <tasks>
-              <exec command="/bin/sh" workingdir="#{project_home}">
-                <arg>/Users/antonio.nascimento/_dev/_tools/bin/commit-changes.sh</arg>
-                <arg>#{COMMON_POM_FILE}</arg>
+              <exec command="mvn" workingdir="#{project_home}">
+                <arg>-Dmessage="Update to the latest released versions"</arg>
+                <arg>scm:checkin</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+    <pipeline name="deploy" isLocked="false">
+      <materials>
+        <pipeline pipelineName="integration" stageName="commit-updates" />
+      </materials>
+      <stage name="prepare-scripts" cleanWorkingDir="true">
+        <jobs>
+          <job name="get-script">
+            <tasks>
+              <fetchartifact pipeline="integration" stage="build" job="build" srcfile="script.sh">
+                <runif status="passed" />
+              </fetchartifact>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="run-scripts" fetchMaterials="false">
+        <approval type="manual" />
+        <jobs>
+          <job name="run-scripts">
+            <tasks>
+              <exec command="/bin/sh">
+                <arg>script.sh</arg>
                 <runif status="passed" />
               </exec>
             </tasks>
